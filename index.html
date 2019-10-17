@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>test_line</title>
+</head>
+
+
+<body>
+    <canvas id="webgl" width="600" height="600"></canvas>
+    <div id="container"></div>
+    <script src="./data/oneline.js"></script>
+    <script src="./data/lesspoints.js"></script>
+    <script src="./data/NHDmap.js"></script>
+    <script src="./data/test.js"></script>
+    <script src="./data/network_1.js"></script>
+    <script src="./data/network_3.js"></script>
+    <script src="./data/network_4.js"></script>
+    <script src="./data/network_5.js"></script>
+    <script src="./data/changedrawmode.js"></script>
+
+    <script src="./lib/three.js"></script>
+    <script src="./lib/GL_Util.js"></script>
+    <script src="./lib/dat.gui.js"></script>
+    <script src="./lib/stats.js"></script>
+
+    <script src="./js/line.js"></script>
+    <script src="./js/spliteTriangleTofeather.js"></script>
+    <script src="./js/variableWidth.js"></script>
+    <script src="./js/networkWithGradient.js"></script>
+    <script src="./js/Animation.js"></script>
+
+    <script>
+        var points = [-0.5, 0.4, -0.9, 0.2, -0.6, 0, -0.9, -0.2, 0.2, 0.2];
+        let color = new Color(0, 0, 1, 1);
+        window.onload = initGUI(); //局部河流的折角和端头设计展示
+        // window.onload = drawRiver(originData); //河流的渐变展示
+
+
+        /*
+        window.onload = getEveryWholeLine_coors(originData1,color);
+
+        window.onload = draw_animation(points,10,color);
+        window.onload = spliteTriangle();
+        window.onload = drawPoints();
+        window.onload = draw();
+        window.onload = comparisonline();
+        window.onload = test_gradient(points);
+        */
+
+        function comparisonline() {
+            var line = {
+                width: 0.1,
+                feather: false
+            };
+
+            var obj = line;
+            var gui = new dat.GUI();
+            gui.add(obj, 'feather').onChange(diffWidLine);
+            gui.add(obj, 'width').min(0).max(10).step(1).onFinishChange(diffWidLine);
+
+            let coordinate = [
+                new THREE.Vector3(-0.9, 0, 0.0),
+                new THREE.Vector3(-0.6, 0.5, 0.0)
+            ];
+            class Color {
+                constructor(R, G, B, alpha) {
+                    this.r = R;
+                    this.g = G;
+                    this.b = B;
+                    this.alpha = alpha;
+                    this.a = alpha;
+                }
+            }
+
+            let colors = [
+                new Color(0, 0, 0, 1.0),
+                new Color(0, 0, 0, 1.0)
+            ]
+
+            let LINES = 1;
+
+            diffWidLine();
+
+            function diffWidLine() {
+                let gl = getWebglEle();
+                gl.clearColor(0.9, 0.9, 0.9, 1);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+                drawlineSequence(gl, coordinate, colors, LINES);
+
+                let width = 0.1;
+                for (let i = 0; i < 15; i++) {
+                    let temp_coor = []
+                    coordinate.forEach((item) => {
+                        let t = new THREE.Vector3(item.x + (i + 1) * 0.1, item.y, item.z);
+                        temp_coor.push(t);
+                    })
+
+                    // width = (line.width+0.3*i)*transform();
+                    let w = width * transform();
+                    drawLineWithFeature(gl, temp_coor, w, w / 1.5, line);
+                    width = 0.1 + width;
+
+                }
+
+                // let width = 0.6;
+                // let matrix_rotate = new THREE.Matrix4();
+
+                // for(let i = 0; i < 8; i++) {
+                //     let coordinate = new THREE.Vector3(0,0,0);
+                //     let temp_coor = []
+                //         let item = new
+                //         matrix_rotate.makeRotationAxis(new THREE.Vector3(-0.6,0.5,0),30+30*i);
+                //         let t = matrix_rotate * item;
+                //         console.log(t);
+                //         temp_coor.push(t);
+
+
+                // width = (line.width+0.3*i)*transform();
+                let w = width * transform();
+                drawLineWithFeature(gl, temp_coor, w, w / 1.5, line);
+                // width = 1+width;
+
+            }
+        }
+
+        function initGUI() {
+            var simpleLine = {
+                width: 5,
+                feather: false,
+                simplify: true,
+                // triangle:false,
+                cap: 'butt',
+                joint: 'miter'
+            };
+
+            let gl = getWebglEle(true);
+            gl.clearColor(1, 1, 1, 1);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+            // drawDifferJoint(simpleLine);
+            // spliteTriangle(simpleLine,PS);
+            // getThreeTriangleStrip(PS,simpleLine);
+
+            var points = [-0.5, 0.4, -0.9, 0.2, -0.6, 0, -0.9, -0.2];
+
+
+            let coors = get_ready_coor(simpleData, simpleLine);
+
+            threeAntialiased(gl, coors[0], simpleLine);
+            threeAntialiased(gl, coors[1], simpleLine);
+            threeAntialiased(gl, coors[2], simpleLine);
+            // threeAntialiased(points, simpleLine);
+
+            var obj = simpleLine;
+            var gui = new dat.GUI();
+            gui.add(obj, 'feather').onChange(redraw);
+            gui.add(obj, 'simplify').onChange(redraw);
+            // gui.add(obj,'triangle').onChange(redraw);
+            // gui.add(obj,'centralline').onChange(redrwa);
+
+            gui.add(obj, 'width').min(1).max(50).step(0.3).onFinishChange(redraw);
+            gui.add(obj, 'cap', ['round', 'square', 'butt']).onChange(redraw);
+            gui.add(obj, 'joint', ['round', 'miter', 'bevel']).onChange(redraw);
+
+
+            let assets = new function() {
+                this.url = function() {
+                    window.location = 'test.html'
+                };
+            };
+
+            let animat = new function() {
+                this.url = function() {
+                    window.location = 'unittest.html'
+                };
+            };
+
+            var oFolder = gui.addFolder('其他');
+            oFolder.add(assets, 'url').name('线绘制速率比较');
+            oFolder.add(animat, "url").name('动态示例');
+
+            function redraw() {
+                // drawDifferJoint(simpleLine);
+                // spliteTriangle(simpleLine,PS);
+                // getThreeTriangleStrip(PS,simpleLine);
+
+                coors = get_ready_coor(simpleData, simpleLine);
+
+                threeAntialiased(gl, coors[0], simpleLine);
+                threeAntialiased(gl, coors[1], simpleLine);
+                threeAntialiased(gl, coors[2], simpleLine);
+
+            };
+        }
+    </script>
+
+</body>
+
+</html>

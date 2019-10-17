@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+
+<body>
+    <canvas id="webgl" width="600" height="600"></canvas>
+    <script src="js/junlinp.js"></script>
+    <script src="lib/three.js"></script>
+    <script src="js/variableWidth.js"></script>
+    <script src="lib/GL_Util.js"></script>
+    <script src="js/line.js"></script>
+    <script src="data/network_1.js"></script>
+    <script>
+        let pts = [
+            // new THREE.Vector3(-0.5, 0.4, 0.0),
+            // new THREE.Vector3(-0.9, 0.4, 0.0),
+            new THREE.Vector3(-0.9, 0.0, 0.0),
+            new THREE.Vector3(-0.5, 0.0, 0.0),
+            new THREE.Vector3(0.5, 0.0, 0.0),
+            // new THREE.Vector3(0.8, -0.5, 0.0),
+        ];
+
+        // const vec2_pts = [];
+        // pts.forEach( (iter) => {
+        //     vec2_pts.push(new THREE.Vector2(iter.x, iter.y))
+        // });
+        // point_left_right = insertPoints(vec2_pts, 0.1, false);
+        // console.log(point_left_right)
+
+        let insertPoints_wrap = (pts, width) => {
+            let vec2_pts = [];
+            pts.forEach((iterator) => {
+                vec2_pts.push(new THREE.Vector2(iterator.x, iterator.y));
+            });
+
+            let left_right = insertPoints(vec2_pts, width, false);
+            let total_length = 0.0;
+            let left_texture_coor = [new THREE.Vector2(0.0, 1.0)];
+            let right_texture_coor = [new THREE.Vector2(0.0, 0.0)];
+
+            let dot = (a, b) => {
+                let d = (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
+                return d;
+            }
+            for (let i = 1; i < pts.length; i++) {
+                let segment_length = Math.sqrt(dot(pts[i], pts[i - 1]));
+                total_length += segment_length;
+                left_texture_coor.push(new THREE.Vector2(total_length, 1.0));
+                right_texture_coor.push(new THREE.Vector2(total_length, 0.0));
+            }
+
+            for (let i = 1; i < pts.length; i++) {
+                left_texture_coor[i].x /= total_length;
+                right_texture_coor[i].x /= total_length;
+            }
+
+            let result = {
+                "left_point": left_right[0],
+                "right_point": left_right[1],
+                "left_texture": left_texture_coor,
+                "right_texture": right_texture_coor
+            };
+            let coor = [];
+            let texture_coor = [];
+            for (let i = 1; i < result['left_point'].length; i++) {
+                let last_left = result['left_point'][i - 1];
+                let last_right = result['right_point'][i - 1];
+                let current_left = result['left_point'][i];
+                let current_right = result['right_point'][i];
+
+                let last_texture_left = result['left_texture'][i - 1];
+                let last_texture_right = result['right_texture'][i - 1];
+                let current_texture_left = result['left_texture'][i];
+                let current_texture_right = result['right_texture'][i];
+
+                coor.push(new THREE.Vector3(last_left.x, last_left.y, 0.0));
+                coor.push(new THREE.Vector3(last_right.x, last_right.y, 0.0));
+                coor.push(new THREE.Vector3(current_right.x, current_right.y, 0.0));
+
+                coor.push(new THREE.Vector3(last_left.x, last_left.y, 0.0));
+                coor.push(new THREE.Vector3(current_right.x, current_right.y, 0.0));
+                coor.push(new THREE.Vector3(current_left.x, current_left.y, 0.0));
+
+                texture_coor.push(last_texture_left.x, last_texture_left.y);
+                texture_coor.push(last_texture_right.x, last_texture_right.y);
+                texture_coor.push(current_texture_right.x, current_texture_right.y);
+
+                texture_coor.push(last_texture_left.x, last_texture_left.y);
+                texture_coor.push(current_texture_right.x, current_texture_right.y);
+                texture_coor.push(current_texture_left.x, current_texture_left.y);
+            }
+
+            return {
+                "coordinate": coor,
+                "texture_coordinate": texture_coor
+            };
+        };
+        let result = insertPoints_wrap(pts, 0.3);
+        let coor = result["coordinate"];
+        let texture_coor = result["texture_coordinate"];
+
+        // let width = 0.05;
+        // pts = [
+        //     new THREE.Vector3(1.0, -width, 0.0),
+        //     new THREE.Vector3(1.0, width, 0.0),
+        //     new THREE.Vector3(-1.0, width, 0.0),
+
+        //     new THREE.Vector3(-1.0, width, 0.0),
+        //     new THREE.Vector3(-1.0, -width, 0.0),
+        //     new THREE.Vector3(1.0, -width, 0.0),
+        // ]
+        // let texture_coordinate = [
+        //     1.0, 0.0,
+        //     1.0, 1.0,
+        //     0.0, 1.0,
+
+        //     0.0, 1.0,
+        //     0.0, 0.0,
+        //     1.0, 0.0,
+        // ];
+
+        const canvas = document.getElementById("webgl");
+        const gl = canvas.getContext('webgl');
+
+        let lastUpdate = Date.now();
+        let total_time = 0.0;
+
+
+        // setInterval(() => {
+        //     //gl_draw_with_texture(gl, pts, texture_coordinate, GL_DRAW_TYPE.TRIANGLES, "texture_white2.png", total_time);
+        //     gl_draw_with_generative_texture(gl, coor, texture_coor, GL_DRAW_TYPE.TRIANGLES, total_time);
+        //     let now = Date.now();
+        //     total_time += 0.025;
+        //     lastUpdate = now;
+        // }, 90);
+
+        /*
+        image.addEventListener('load', function() {
+            gl.bindTexture(gl.TEXTURE_2D, ptr_texture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA,gl.UNSIGNED_BYTE, image);
+            gl.generateMipmap(gl.TEXTURE_2D);
+        });
+
+        console.log(insertPoints(vec2_pts, 0.1, false));
+       let point = generateBevelledPoint(pts, 0.1);
+       console.log(point);
+
+
+        let vColor = [
+            new Color(0.0, 0.0, 0.0, 1.0),
+            new Color(0.0, 0.0, 0.0, 1.0),
+            new Color(1.0, 1.0, 1.0, 1.0),
+            new Color(0.0, 0.0, 0.0, 1.0),
+            new Color(1.0, 1.0, 1.0, 1.0),
+            new Color(1.0, 1.0, 1.0, 1.0),
+        ];
+        for(let i = 0; i < point.length - 6; i++) {
+            vColor.push(new Color(0, 0, 1.0, 1));
+        }
+
+         */
+        // drawlineSequence( gl, point, vColor, GL_DRAW_TYPE.TRIANGLES);
+
+
+
+
+
+
+        function network_animation(origin_data) {
+            let boundary = getMapSize(getlines(originData));
+            let line_level = allLines(originData);
+            let lines = getPoints(line_level);
+
+            let coor_total = [];
+            let texture_coor_total = [];
+            let width = 0.025;
+
+            for (let i = 0; i < lines.coors.length; i++) {
+                let pts_vec3 = [];
+
+                let pts_gl_coor = convertCor_To_gl(lines.coors[i], boundary);
+                pts_gl_coor.forEach((item) => {
+                    let t = new THREE.Vector3(item.x, item.y, 0.0);
+                    pts_vec3.push(t);
+                });
+
+                let result = insertPoints_wrap(pts_vec3, width);
+                width -= 0.0005;
+
+                let coor = result["coordinate"];
+                let texture_coor = result["texture_coordinate"];
+
+                coor.forEach((item) => {
+                    coor_total.push(item);
+                });
+                texture_coor.forEach((item) => {
+                    texture_coor_total.push(item);
+                });
+            }
+
+            const canvas = document.getElementById("webgl");
+            const gl = canvas.getContext('webgl');
+            let lastUpdate = Date.now();
+            let total_time = 0.0;
+
+            setInterval(() => {
+                //gl_draw_with_texture(gl, pts, texture_coordinate, GL_DRAW_TYPE.TRIANGLES, "texture_white2.png", total_time);
+                // gl_draw_with_generative_texture(gl, coor, texture_coor, GL_DRAW_TYPE.TRIANGLES, total_time);
+                gl_draw_with_generative_texture(gl, coor_total, texture_coor_total, GL_DRAW_TYPE.TRIANGLES, total_time);
+                let now = Date.now();
+                total_time += 0.025;
+                lastUpdate = now;
+            }, 50);
+        }
+
+
+
+        network_animation(originData);
+    </script>
+</body>
+
+</html>

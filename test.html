@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+
+<body>
+    <canvas id="webgl" width="600" height="600"></canvas>
+    <div id="container"></div>
+
+    <script src="./js/comparison.js"></script>
+    <script src="./js/line.js"></script>
+    <script src="./js/spliteTriangleTofeather.js"></script>
+
+    <script src="./lib/three.js"></script>
+    <script src="./lib/GL_Util.js"></script>
+    <script src="./lib/dat.gui.js"></script>
+
+    <script>
+        let pts_vector = [];
+
+        class Color {
+            constructor(R, G, B, alpha) {
+                this.r = R;
+                this.g = G;
+                this.b = B;
+                this.alpha = alpha;
+                this.a = alpha;
+            }
+        }
+
+
+        const canvas = document.getElementById("webgl");
+        const gl = canvas.getContext('webgl', {
+            antialias: true
+        });
+
+        function initLine(Pt_num) {
+            for (let i = 0; i < Pt_num; i++) {
+                let x = (Math.random() - 0.5) * 2;
+                let y = (Math.random() - 0.5) * 2;
+                let vec = new THREE.Vector2(x, y);
+                pts_vector.push(vec);
+            }
+        }
+
+        initLine(50);
+        //let a = Date.now();//计算不同顶点绘制所需时间的长短
+        comparison(pts_vector, false, 'origin');
+        //let b = Date.now();
+        //console.log(b - a);
+
+
+        let changeJoint = {
+            /*0代表用WebGL自带的线绘制
+            1 代表尖角绘制
+            2代表平角绘制
+            3other代表原角绘制
+            */
+            joint: 'origin'
+        }
+
+        function redraw() {
+            comparison(pts_vector, false, changeJoint.joint);
+        }
+
+
+        let obj = changeJoint;
+        let gui = new dat.GUI();
+        gui.add(obj, 'joint', ["bevel", "miter", "arc", 'origin']).onChange(redraw);
+
+        let animat = new function() {
+            this.url = function() {
+                window.location = 'index.html'
+            };
+        };
+
+        var oFolder = gui.addFolder('其他');
+        oFolder.add(animat, 'url').name('线帽绘制');
+    </script>
+</body>
+
+</html>
